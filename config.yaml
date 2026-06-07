@@ -38,8 +38,8 @@ ebay:
 inventory:
   enabled: true
   sheet_id: "1h4fN4S7-VVkSZkm28lPa4E9Fa4ua4Mjsm56lMbefNG8"
-  inventory_gid: "148358721"   # the Inventory tab's gid (from its URL)
-  settings_gid: ""             # optional: Settings tab gid (for starting capital)
+  inventory_gid: "1505124301"  # "Inventory & Profit Log" tab
+  settings_gid: "179672045"    # "Settings & Assumptions" tab (for starting capital)
   starting_capital_cad: 0      # fallback if not read from the sheet
   # The sheet must be shared so the CSV export is reachable:
   #   File -> Share -> General access -> "Anyone with the link" (Viewer)
