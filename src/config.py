@@ -47,6 +47,14 @@ class Config:
         return os.getenv("PRICECHARTING_TOKEN", "").strip()
 
     @property
+    def ebay_client_id(self) -> str:
+        return os.getenv("EBAY_CLIENT_ID", "").strip()
+
+    @property
+    def ebay_client_secret(self) -> str:
+        return os.getenv("EBAY_CLIENT_SECRET", "").strip()
+
+    @property
     def gmail_address(self) -> str:
         return os.getenv("GMAIL_ADDRESS", "").strip()
 

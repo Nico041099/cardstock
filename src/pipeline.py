@@ -5,7 +5,7 @@ import logging
 from datetime import date as date_cls
 from typing import List, Optional
 
-from . import analyze, db, rules, email_report
+from . import analyze, db, rules, email_report, inventory
 from .config import Config
 from .models import CardRef, Movement, PriceSnapshot
 from .sources import get_source
@@ -87,9 +87,20 @@ def run(
     counts = {k: len([s for s in signals if s.kind == k]) for k in ("BUY", "AVOID", "SELL")}
     log.info("signals: %s", counts)
 
+    # 4b. Inventory / budget snapshot (read-only; never fails the run)
+    summary = None
+    try:
+        summary = inventory.load_summary(cfg, value_holdings=True)
+        if summary:
+            log.info("inventory: spent CA$%.2f, budget left CA$%.2f, realized CA$%.2f",
+                     summary.spent, summary.budget_left, summary.realized_profit)
+    except Exception as exc:  # noqa: BLE001
+        log.error("inventory snapshot failed: %s", exc)
+
     # 5. Email
     html = email_report.build_html(
-        cfg, run_date, source_name, signals, movers_up, movers_down, watchlist_moves
+        cfg, run_date, source_name, signals, movers_up, movers_down, watchlist_moves,
+        summary=summary,
     )
     if preview_path:
         p = email_report.write_preview(html, preview_path)

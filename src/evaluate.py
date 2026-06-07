@@ -66,6 +66,15 @@ class Verdict:
     reasons: List[str] = field(default_factory=list)
     alternatives: int = 0
     source_site: str = "unknown"
+    # eBay active-listing comps (USD)
+    ebay_count: int = 0
+    ebay_low: Optional[float] = None
+    ebay_median: Optional[float] = None
+    # budget (CAD)
+    fx: float = 1.0
+    budget_left_cad: Optional[float] = None
+    cost_cad: Optional[float] = None
+    affordable: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +265,41 @@ def market_context(cfg: Config, snap: PriceSnapshot) -> Optional[Movement]:
         conn.close()
 
 
+def ebay_source(cfg: Config):
+    """Return a configured EbaySource, or None if creds are absent."""
+    from .sources.ebay import EbaySource
+    s = EbaySource(cfg)
+    return s if s.configured else None
+
+
+def resolve_ebay_link(cfg: Config, url: str) -> Optional[dict]:
+    """If url is an eBay listing and eBay is configured, fetch its price+title via API."""
+    from .sources.ebay import ebay_item_id
+    s = ebay_source(cfg)
+    if not s:
+        return None
+    iid = ebay_item_id(url)
+    if not iid:
+        return None
+    try:
+        return s.item_by_legacy_id(iid)
+    except Exception as exc:  # noqa: BLE001
+        log.info("eBay item lookup failed: %s", exc)
+        return None
+
+
+def ebay_active_comps(cfg: Config, name: Optional[str], number: Optional[str] = None) -> Optional[dict]:
+    s = ebay_source(cfg)
+    if not s or not name:
+        return None
+    q = f"{name} {number}".strip() if number else name
+    try:
+        return s.active_comps(q)
+    except Exception as exc:  # noqa: BLE001
+        log.info("eBay comps failed: %s", exc)
+        return None
+
+
 def build_verdict(
     cfg: Config,
     info: LinkInfo,
@@ -263,6 +307,8 @@ def build_verdict(
     alternatives: int,
     asking: Optional[float],
     roi: Optional[float] = None,
+    ebay_stats: Optional[dict] = None,
+    summary=None,
 ) -> Verdict:
     target_roi = roi if roi is not None else float(cfg.get("economics.target_roi", 0.5))
     field_name = cfg.get("pricing.price_field", "market")
@@ -281,7 +327,22 @@ def build_verdict(
         target_roi=target_roi,
         alternatives=alternatives,
         source_site=info.site,
+        fx=float(cfg.get("economics.usd_to_cad", 1.37)),
     )
+
+    # eBay active-listing comps (USD), if provided.
+    if ebay_stats and ebay_stats.get("count"):
+        v.ebay_count = ebay_stats["count"]
+        v.ebay_low = ebay_stats.get("low")
+        v.ebay_median = ebay_stats.get("median")
+
+    # Budget affordability (CAD) from inventory summary, if provided.
+    if summary is not None:
+        v.budget_left_cad = summary.budget_left
+        cost_usd = asking if asking is not None else max_buy
+        if cost_usd is not None:
+            v.cost_cad = round(cost_usd * v.fx, 2)
+            v.affordable = v.cost_cad <= summary.budget_left
 
     # Market timing note from local history, if available.
     ctx = market_context(cfg, snap)
@@ -328,5 +389,15 @@ def build_verdict(
         v.rating = "PASS"
         over = asking - market
         v.reasons.append(f"${asking:.2f} is ABOVE market (${market:.2f}, +${over:.2f}) — overpaying")
+
+    # Budget overlay (CAD) — never blocks, just warns.
+    if v.affordable is False and v.rating in ("BUY", "FAIR"):
+        v.reasons.append(
+            f"⚠ but ~CA${v.cost_cad:,.2f} exceeds remaining budget (CA${v.budget_left_cad:,.2f} left)"
+        )
+    elif v.affordable is True and v.rating == "BUY":
+        v.reasons.append(
+            f"fits budget — ~CA${v.cost_cad:,.2f} of CA${v.budget_left_cad:,.2f} left"
+        )
 
     return v

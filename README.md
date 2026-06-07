@@ -21,6 +21,8 @@ Fill in `.env`:
 - `POKEMONTCG_API_KEY` — free at https://pokemontcg.io/dev (optional, raises rate limits).
 - `GMAIL_ADDRESS` + `GMAIL_APP_PASSWORD` — enable 2-Step Verification on the Gmail
   account, then create an **App Password** for "Mail". Do **not** use the normal password.
+- `EBAY_CLIENT_ID` + `EBAY_CLIENT_SECRET` — free at https://developer.ebay.com (create a
+  production keyset). Powers active-listing comps and reading price from a pasted eBay link.
 - `PRICECHARTING_TOKEN` — only needed for the optional paid graded-price source.
 
 Then edit:
@@ -68,6 +70,47 @@ How it works (and its honest limits):
 
 The matched card is always printed — if it's the wrong one, re-run with
 `--set`/`--number`/`--name`.
+
+**eBay + budget overlays** (shown automatically when configured):
+- With eBay keys set, paste an eBay `/itm/...` link and the asking price + title are
+  read **via the official Browse API** (no scraping). The verdict also shows
+  `eBay now: low / median (N active listings)` next to TCGplayer market.
+- With the inventory sheet connected, the verdict adds a budget line and warns if a
+  buy would exceed your remaining budget (`⚠ exceeds remaining budget (CA$X left)`).
+
+## Inventory & budget (Google Sheet)
+
+The app reads your workbook **read-only** to show spend / savings / budget and to make
+buy decisions budget-aware. All figures are **CAD**; USD market prices are converted
+with `economics.usd_to_cad` in `config.yaml`.
+
+**Setup:**
+1. Share the sheet: **File → Share → General access → "Anyone with the link" (Viewer).**
+   (The app uses the CSV export URL; the sheet must be link-readable.)
+2. In `config.yaml` under `inventory:`, set `sheet_id` and `inventory_gid` (the Inventory
+   tab's gid — open that tab and copy the `gid=` from the browser URL). Optionally set
+   `settings_gid` so the app reads **starting capital** from the Settings tab; otherwise
+   set `starting_capital_cad`.
+3. Set `economics.usd_to_cad` to a current-ish rate.
+
+**Snapshot command:**
+
+```bash
+.venv/bin/python inventory_report.py          # spent / saved / budget left (values holdings vs market)
+.venv/bin/python inventory_report.py --fast   # skip the live holdings valuation
+```
+
+The same snapshot is added to the top of the daily email digest.
+
+What the numbers mean:
+- **Spent** = Σ cost basis · **Realized profit** = Σ profit on sold rows · **Proceeds** = Σ net proceeds
+- **Budget left** = starting capital + proceeds − spent
+- **Holdings value** = held cards priced at current market (USD→CAD) ·
+  **Below-market** = Σ(market − cost) on held cards (your "bought smart" savings)
+
+**Sold comps note:** true eBay *sold* prices need the Marketplace Insights API, which is
+gated (partner-only). The app is wired for it but uses **active** listings unless your
+keyset is approved.
 
 ## Tests
 

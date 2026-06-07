@@ -18,7 +18,15 @@ import sys
 from pathlib import Path
 
 from src.config import Config
-from src.evaluate import build_verdict, parse_link, resolve_card
+from src.evaluate import (
+    build_verdict,
+    ebay_active_comps,
+    parse_link,
+    resolve_card,
+    resolve_ebay_link,
+)
+from src.evaluate import _clean_slug_to_name
+from src.inventory import load_summary
 
 ROOT = Path(__file__).resolve().parent
 
@@ -51,6 +59,14 @@ def main() -> int:
     is_url = args.input.strip().lower().startswith(("http://", "https://"))
     if is_url:
         info = parse_link(args.input, fetch=not args.no_fetch)
+        # eBay links: pull real price + title via the official API (no scraping).
+        if info.site == "ebay" and info.asking_price is None:
+            item = resolve_ebay_link(cfg, args.input)
+            if item:
+                if item.get("price") is not None:
+                    info.asking_price = item["price"]
+                if item.get("title") and (not info.name_guess or len(info.name_guess) < 3):
+                    info.name_guess = _clean_slug_to_name(item["title"]) or info.name_guess
     else:
         info = parse_link("", fetch=False)
         info.site = "name"
@@ -71,7 +87,14 @@ def main() -> int:
         print("   Try: evaluate_link.py \"<card name>\" --set <id> --number <n> --price <$>")
         return 2
 
-    v = build_verdict(cfg, info, snap, alts, asking, roi=args.roi)
+    # eBay active-listing comps + budget context (both optional / best-effort).
+    ebay_stats = ebay_active_comps(cfg, snap.name, snap.number)
+    summary = load_summary(cfg, value_holdings=False)
+    if summary and not (summary.items or summary.starting_capital):
+        summary = None  # readable but empty sheet — skip budget noise
+
+    v = build_verdict(cfg, info, snap, alts, asking, roi=args.roi,
+                      ebay_stats=ebay_stats, summary=summary)
 
     icon = ICON.get(v.rating, "")
     setnum = f"{v.set_id} #{v.number}".strip()
@@ -79,7 +102,13 @@ def main() -> int:
     print(f"{icon} {v.rating} — {v.card_name}  ({setnum})")
     print(f"   Asking:   {_money(v.asking)}" + ("" if v.asking is not None else "  (none given — pass --price)"))
     print(f"   Market:   {_money(v.market)}   (TCGplayer market, USD)")
+    if v.ebay_count:
+        print(f"   eBay now: low {_money(v.ebay_low)} / median {_money(v.ebay_median)}  "
+              f"({v.ebay_count} active listings)")
     print(f"   Max buy:  {_money(v.max_buy)}   for {v.target_roi*100:.0f}% ROI after eBay fees + shipping")
+    if v.budget_left_cad is not None:
+        print(f"   Budget:   CA${v.budget_left_cad:,.2f} left"
+              + (f"  (this ~CA${v.cost_cad:,.2f})" if v.cost_cad is not None else ""))
     if v.market_note:
         print(f"   Timing:   {v.market_note}")
     for r in v.reasons:

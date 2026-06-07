@@ -45,6 +45,20 @@ TEMPLATE = """
 <h1>{{ subject_prefix }} — {{ date }}</h1>
 <div class="sub">Watchlist: {{ watchlist|length }} cards · tracked via {{ source }} (TCGplayer market, USD)</div>
 
+{% if summary %}
+<h2>📊 Business snapshot (CAD)</h2>
+<table>
+  <tr><th>Spent</th><th>Budget left</th><th>Realized profit</th><th>Holdings (mkt / cost)</th><th>Below-market</th></tr>
+  <tr>
+    <td>CA${{ '%.2f'|format(summary.spent) }}<br><span class="thin">{{ summary.n_held }} held · {{ summary.n_sold }} sold</span></td>
+    <td><b>CA${{ '%.2f'|format(summary.budget_left) }}</b></td>
+    <td class="{{ 'up' if summary.realized_profit>=0 else 'down' }}">CA${{ '%.2f'|format(summary.realized_profit) }}</td>
+    <td>{% if summary.holdings_market_cad is not none %}CA${{ '%.2f'|format(summary.holdings_market_cad) }} / CA${{ '%.2f'|format(summary.holdings_cost) }}{% else %}—{% endif %}</td>
+    <td class="{{ 'up' if (summary.below_market_savings or 0)>=0 else 'down' }}">{% if summary.below_market_savings is not none %}CA${{ '%.2f'|format(summary.below_market_savings) }}{% else %}—{% endif %}</td>
+  </tr>
+</table>
+{% endif %}
+
 {% macro pct(v) %}{% if v is not none %}<span class="{{ 'up' if v>0 else 'down' }}">{{ '%+.1f'|format(v*100) }}%</span>{% else %}—{% endif %}{% endmacro %}
 {% macro money(v) %}{% if v is not none %}${{ '%.2f'|format(v) }}{% else %}—{% endif %}{% endmacro %}
 
@@ -91,6 +105,7 @@ def build_html(
     movers_up: List[Movement],
     movers_down: List[Movement],
     watchlist: List[Movement],
+    summary=None,
 ) -> str:
     env = Environment(loader=BaseLoader(), autoescape=select_autoescape(["html"]))
     tmpl = env.from_string(TEMPLATE)
@@ -98,6 +113,7 @@ def build_html(
         subject_prefix=cfg.get("email.subject_prefix", "[Card Squad] Daily Digest"),
         date=date,
         source=source,
+        summary=summary,
         buys=[s for s in signals if s.kind == "BUY"],
         sells=[s for s in signals if s.kind == "SELL"],
         avoids=[s for s in signals if s.kind == "AVOID"],

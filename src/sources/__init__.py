@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .base import PriceSource
+from .ebay import EbaySource
 from .pokemontcg import PokemonTcgSource
 from .pricecharting import PriceChartingSource
 
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 REGISTRY = {
     "pokemontcg": PokemonTcgSource,
     "pricecharting": PriceChartingSource,
+    "ebay": EbaySource,
 }
 
 
@@ -32,6 +34,7 @@ __all__ = [
     "PriceSource",
     "PokemonTcgSource",
     "PriceChartingSource",
+    "EbaySource",
     "REGISTRY",
     "get_source",
 ]
