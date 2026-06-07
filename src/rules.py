@@ -7,17 +7,19 @@ from .config import Config
 from .models import Movement, Signal
 
 
-def target_max_buy(cfg: Config, market: float) -> Optional[float]:
+def target_max_buy(cfg: Config, market: float, roi: Optional[float] = None) -> Optional[float]:
     """Most we should pay and still hit target ROI after eBay fees + shipping.
 
     max_buy = (market * ebay_fee_multiplier - per_order_fee - ship) / (1 + target_roi)
+    Pass `roi` to override the configured target ROI for a one-off check.
     """
     if market is None or market <= 0:
         return None
     fee_mult = float(cfg.get("economics.ebay_fee_multiplier", 0.864))
     per_order = float(cfg.get("economics.ebay_per_order_fee", 0.40))
     ship = float(cfg.get("economics.ship_cost", 1.0))
-    roi = float(cfg.get("economics.target_roi", 0.5))
+    if roi is None:
+        roi = float(cfg.get("economics.target_roi", 0.5))
     net = market * fee_mult - per_order - ship
     mb = net / (1.0 + roi)
     return round(mb, 2) if mb > 0 else None

@@ -120,6 +120,30 @@ class PokemonTcgSource(PriceSource):
         log.warning("watchlist entry has neither id nor set+number: %s", ref)
         return None
 
+    def search(
+        self,
+        name: Optional[str] = None,
+        set_id: Optional[str] = None,
+        number: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[PriceSnapshot]:
+        """Search cards by (partial) name / set / number. Used by the link evaluator."""
+        parts: List[str] = []
+        if name:
+            safe = name.replace('"', " ").strip()
+            if safe:
+                parts.append(f'name:"{safe}"')
+        if set_id:
+            parts.append(f"set.id:{set_id}")
+        if number:
+            parts.append(f'number:"{number}"')
+        q = " ".join(parts) if parts else "*"
+        data = self._get(
+            "cards",
+            params={"q": q, "pageSize": limit, "orderBy": "-set.releaseDate"},
+        )
+        return [self._to_snapshot(c) for c in (data.get("data") or [])]
+
     def fetch_set(self, set_id: str, max_cards: int = 0) -> List[PriceSnapshot]:
         snaps: List[PriceSnapshot] = []
         page = 1

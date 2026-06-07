@@ -42,6 +42,33 @@ History accrues over runs — movers and most signals need **2+ days** of data
 (30-day-based signals get more reliable as history builds). Logs are written to
 `logs/cardstock.log`.
 
+## Should I buy THIS one? (link / card evaluator)
+
+Paste a Collectr, eBay, or TCGplayer link (or just a card name) and get a clear
+**BUY / FAIR / PASS** verdict against your target ROI:
+
+```bash
+.venv/bin/python evaluate_link.py "<paste any link>"            # auto-reads price if the page allows
+.venv/bin/python evaluate_link.py "<link>" --price 450          # judge a specific asking price
+.venv/bin/python evaluate_link.py "Charizard" --set base1 --number 4 --price 450
+.venv/bin/python evaluate_link.py "<link>" --roi 0.3            # judge for 30% ROI instead of 50%
+.venv/bin/python evaluate_link.py "<link>" --no-fetch           # slug only, don't touch the page
+```
+
+How it works (and its honest limits):
+- The **card identity** is read from the URL slug (e.g. TCGplayer URLs contain
+  `charizard-base-set-4`). eBay item URLs often have no slug — pass `--name`/`--set`/`--number`.
+- The **asking price** is grabbed from the page's meta tags when possible. eBay,
+  TCGplayer, and Collectr block bots and render with JS, so this often fails —
+  when it does, pass `--price`. (We never hard-scrape; it's best-effort + ToS-safe.)
+- The **market price** always comes from the official Pokémon TCG API.
+- Verdict: `BUY` if asking ≤ your max buy, `FAIR` if below market but above max buy,
+  `PASS` if above market. If you've been running `run_daily.py`, it also shows a
+  dip/overheated timing note from your local history.
+
+The matched card is always printed — if it's the wrong one, re-run with
+`--set`/`--number`/`--name`.
+
 ## Tests
 
 ```bash
