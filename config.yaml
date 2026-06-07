@@ -1,0 +1,44 @@
+# The Card Squad — all tunable knobs live here. Edit without touching code.
+
+database:
+  path: data/cardstock.sqlite
+
+# Which price field from a source counts as "the price" (market is best for TCGplayer).
+pricing:
+  source: pokemontcg          # default source module name
+  price_field: market          # one of: market, low, mid, high
+
+# Movement / history math.
+movement:
+  thin_min_points: 5           # fewer history points than this = "thin / low confidence"
+  top_movers_limit: 15         # how many up/down movers to show in the digest
+
+# Rules engine thresholds. All percentages are fractions (0.85 = 85%).
+rules:
+  buy_drop_pct: 0.85           # BUY if current <= 30d_avg * this
+  min_price: 5.0               # skip pennies: 30d_avg must be >= this
+  spike_pct: 0.30              # AVOID if up >= this over 7 days
+  sell_gain_pct: 0.20          # SELL if current >= cost_basis * (1 + this)
+  sell_vs_avg_pct: 1.15        # SELL if current >= 30d_avg * this
+  min_data_points: 3           # need at least this many history points to fire BUY
+
+# Resale economics, used for the target-max-buy formula.
+economics:
+  ebay_fee_multiplier: 0.864   # keep 86.4% after ~13.6% fee
+  ebay_per_order_fee: 0.40     # flat per-order fee, dollars
+  ship_cost: 1.00              # est. shipping cost per order, dollars
+  target_roi: 0.5              # desired return on cost (0.5 = 50%)
+
+# HTTP behavior — be a good API citizen.
+http:
+  timeout_seconds: 30
+  max_retries: 4
+  backoff_base_seconds: 2.0    # exponential: base * 2**attempt
+  per_request_pause: 0.20      # polite pause between requests
+
+email:
+  enabled: true
+  subject_prefix: "[Card Squad] Daily Digest"
+  # smtp host/port for Gmail
+  smtp_host: smtp.gmail.com
+  smtp_port: 465

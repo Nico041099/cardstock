@@ -1,0 +1,13 @@
+# Whole sets to scan daily for top gainers / droppers.
+# Use Pokemon TCG API set ids (e.g. base1, swsh4, sv1). Find ids at
+# https://api.pokemontcg.io/v2/sets
+#
+# Scanning a set pulls every card in it, so keep this list focused — each set
+# is many API requests and rows of history per day.
+
+sets:
+  - base1                  # Base Set (example — replace with sets you actually flip)
+
+# Optional: cap how many cards per set get stored (0 = no cap). Useful to keep
+# big modern sets from flooding the DB while you test.
+max_cards_per_set: 0

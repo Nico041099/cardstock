@@ -1,0 +1,30 @@
+# Cards to track daily.
+#
+# Each entry is either:
+#   - id: <pokemontcg.io card id>          (preferred, exact)
+#   - set + number:                         (resolved to an id at fetch time)
+#       set: <set id>
+#       number: "<collector number>"
+#
+# Optional fields:
+#   name:        free-text label for the digest (auto-filled if omitted)
+#   owned:       true if we hold this card (enables SELL signals)
+#   cost_basis:  what we paid, dollars (used by SELL signal when owned)
+#   qty:         how many we hold (display only)
+#
+# Example entries below — replace with our real cards.
+
+cards:
+  - id: base1-4            # Charizard, Base Set
+    name: "Charizard (Base Set)"
+    owned: false
+
+  - id: swsh4-25           # example
+    name: "Example Card"
+    owned: true
+    cost_basis: 40.00
+    qty: 2
+
+  - set: base1             # by set + number
+    number: "2"
+    name: "Blastoise (Base Set)"
