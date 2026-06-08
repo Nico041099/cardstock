@@ -36,7 +36,7 @@ ebay:
 
 # Inventory / budget — reads your Google Sheet (published-to-web CSV, read-only).
 inventory:
-  enabled: true
+  enabled: false
   sheet_id: "1h4fN4S7-VVkSZkm28lPa4E9Fa4ua4Mjsm56lMbefNG8"
   inventory_gid: "1505124301"  # "Inventory & Profit Log" tab
   settings_gid: "179672045"    # "Settings & Assumptions" tab (for starting capital)
@@ -53,7 +53,7 @@ http:
   per_request_pause: 0.20      # polite pause between requests
 
 email:
-  enabled: true
+  enabled: false
   subject_prefix: "[Card Squad] Daily Digest"
   # smtp host/port for Gmail
   smtp_host: smtp.gmail.com
